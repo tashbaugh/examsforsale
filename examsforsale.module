@@ -1,0 +1,39 @@
+<?php
+/**
+* @file
+* Code for the Exams For Sale Feature.
+*/
+
+include_once 'examsforsale.features.inc';
+
+/**
+ * Implements hook_commerce_checkout_page_info_alter().
+ */
+function examsforsale_commerce_checkout_page_info_alter(&$pages) {
+    if(!empty($pages['review'])) {
+        $pages['review']['submit_value'] = t('Submit Payment');
+    }
+}
+
+/**
+ * Implements hook_entity_insert().
+ */
+function examsforsale_entity_insert($entity, $type)
+{
+    if ($type == 'registration') {
+        $exam_product_display = node_load($entity->entity_id);
+        $currentAccount = $GLOBALS['user'];
+        $isStudent = in_array('Participant', $currentAccount->roles);
+        if ($isStudent) {
+            $exam_type = $exam_product_display->field_exam_type['und'][0]['value'];
+            if ($exam_type == "Student Paid") {
+                $registration_id = $entity->registration_id;
+                $display_path = 'registration/'.$registration_id;
+                $data = array(context => array(display_path => $display_path));
+                $product_id = $exam_product_display->field_exam_product['und'][0]['product_id'];
+                $line_item = commerce_product_line_item_new(commerce_product_load($product_id), 1, 0, $data, 'product');
+                $line_item = commerce_cart_product_add($currentAccount->uid, $line_item);
+            }
+        }
+    }
+}
